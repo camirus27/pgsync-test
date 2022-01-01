@@ -1,0 +1,59 @@
+version: '3.8'
+services:
+  elasticsearch:
+    image: 'docker.elastic.co/elasticsearch/elasticsearch:7.13.4'
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - '9200:9200'
+
+  postgres:
+    build:
+      context: .
+      dockerfile: PostgresDockerfile
+    container_name: postgres
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=testdb
+
+  redis:
+    image: 'redis:alpine'
+    container_name: redis
+    ports:
+      - '6379:6379'
+
+  pgsync:
+    build:
+      context: .
+      dockerfile: PgsyncDockerfile
+    container_name: pgsync
+    command: ./runserver.sh
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=200
+      - net.ipv4.tcp_keepalive_intvl=200
+      - net.ipv4.tcp_keepalive_probes=5
+    labels:
+      org.label-schema.name: "pgsync"
+      org.label-schema.description: "Postgres to elasticsearch sync"
+      com.label-schema.service-type: "daemon"
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    environment:
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres
+      - PG_DATABASE=testdb
+      - PG_HOST=postgres
+      - ELASTICSEARCH_HOST=elasticsearch
+      - REDIS_HOST=redis

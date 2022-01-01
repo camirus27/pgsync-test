@@ -1,0 +1,13 @@
+FROM python:3.9
+
+WORKDIR /usr/src/app
+COPY ./work ./
+
+RUN pip install pgsync
+RUN chmod +x runserver.sh
+
+RUN apt update \
+    && apt install -y moreutils \
+    && apt install -y wait-for-it
+
+
